@@ -98,6 +98,11 @@ def main(argv: List[str], *, is_development: bool):
             environment.SHOW_SPINNER = False
             logger.setLevel(logging.ERROR)
 
+        # Ensure that `list --format json` only outputs JSON
+        if args.command == "list" and getattr(args, "format", None) == "json":
+            environment.SHOW_SPINNER = False
+            logger.setLevel(logging.ERROR)
+
         elif args.command != "self-update":
             new_version = check_for_updates()
 
