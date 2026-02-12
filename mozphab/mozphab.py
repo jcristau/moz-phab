@@ -103,7 +103,13 @@ def main(argv: List[str], *, is_development: bool):
             environment.SHOW_SPINNER = False
             logger.setLevel(logging.ERROR)
 
-        elif args.command != "self-update":
+        # Check for updates (skip for commands that need clean output)
+        skip_update_check = (
+            args.command == "self-update"
+            or (args.command == "patch" and getattr(args, "raw", False))
+            or (args.command == "list" and getattr(args, "format", None) == "json")
+        )
+        if not skip_update_check:
             new_version = check_for_updates()
 
             if new_version and environment.IS_WINDOWS:
