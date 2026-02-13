@@ -226,6 +226,12 @@ def validate_commit_stack(
 
         overridable_errors = []
 
+        # Validate author email
+        if not commit.author_email or "@" not in commit.author_email:
+            errors.setdefault(commit.name, []).append(
+                f"Invalid or missing author email: {commit.author_email!r}"
+            )
+
         if not commit.bug_id and not args.no_bug:
             overridable_errors.append("Missing bug ID")
 

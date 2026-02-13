@@ -231,8 +231,6 @@ class Mercurial(Repository):
         return self.hg_out(["log", "-T", "{%s}\n" % select, "-r", revset], split=split)
 
     def before_submit(self):
-        self.validate_email()
-
         # Remember the currently checked out commit.  If a bookmark is active
         # just use that, otherwise create a randomly named bookmark which will
         # be deleted in cleanup(). Mercurial will automatically move the
@@ -353,11 +351,10 @@ class Mercurial(Repository):
         self._config_options.clear()
         self._extra_options.clear()
 
-        # Need to use the correct username.
-        if "ui.username" not in hg_config:
-            raise Error("ui.username is not configured in your hgrc")
-        self._safe_config_options["ui.username"] = hg_config["ui.username"]
-        self.username = hg_config["ui.username"]
+        # Use ui.username if configured (for operations that need it)
+        if "ui.username" in hg_config:
+            self._safe_config_options["ui.username"] = hg_config["ui.username"]
+            self.username = hg_config["ui.username"]
 
         # Always need rebase.
         self._config_options["extensions.rebase"] = ""

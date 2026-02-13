@@ -114,8 +114,6 @@ class Git(Repository):
         )
 
     def before_submit(self):
-        self.validate_email()
-
         if self.is_index_modified():
             raise Error(
                 "Uncommitted changes present. "

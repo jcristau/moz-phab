@@ -74,12 +74,12 @@ class GitCommand:
 
         safe_options = []
 
-        # Need to use the correct username.
-        if "user.email" not in git_config:
-            raise Error("user.email is not configured in your gitconfig")
-
-        self.email = git_config["user.email"]
-        safe_options.extend(["-c", "user.email=%s" % git_config["user.email"]])
+        # Use user.email if configured (for operations that need it)
+        if "user.email" in git_config:
+            self.email = git_config["user.email"]
+            safe_options.extend(["-c", "user.email=%s" % git_config["user.email"]])
+        else:
+            self.email = ""
 
         if "user.name" in git_config:
             safe_options.extend(["-c", "user.name=%s" % git_config["user.name"]])
