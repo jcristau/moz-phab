@@ -50,6 +50,7 @@ class TestListRevisions(unittest.TestCase):
             status=None,
             verbose=False,
             format="text",
+            user=None,
         )
         self.mock_revisions = [
             {
@@ -335,6 +336,50 @@ class TestListRevisions(unittest.TestCase):
         # Verify reviewer information is shown
         self.assertIn(Contains("Reviewers:"), logging_watcher.output)
 
+    @mock.patch("mozphab.commands.list.conduit")
+    def test_list_revisions_specified_user(self, mock_conduit):
+        """Test listing with --user flag."""
+        # Setup mocks
+        mock_conduit.check.return_value = True
+        mock_conduit.get_users.return_value = [
+            {"phid": "PHID-USER-other", "userName": "otheruser"}
+        ]
+        mock_conduit.call.return_value = {"data": [self.mock_revisions[0]]}
+
+        # Modify args to specify a user
+        self.args.user = "otheruser"
+
+        # Call function
+        with self.assertLogs():
+            list_command.list_revisions(None, self.args)
+
+        # Verify get_users was called with the username
+        mock_conduit.get_users.assert_called_once_with(["otheruser"])
+
+        # Verify whoami was NOT called
+        mock_conduit.whoami.assert_not_called()
+
+        # Verify the API call used the other user's PHID
+        call_args = mock_conduit.call.call_args
+        self.assertIn("authorPHIDs", call_args[0][1]["constraints"])
+        self.assertEqual(
+            call_args[0][1]["constraints"]["authorPHIDs"], ["PHID-USER-other"]
+        )
+
+    @mock.patch("mozphab.commands.list.conduit")
+    def test_list_revisions_user_not_found(self, mock_conduit):
+        """Test handling when specified user is not found."""
+        mock_conduit.check.return_value = True
+        mock_conduit.get_users.return_value = []
+
+        # Modify args to specify a non-existent user
+        self.args.user = "nonexistent"
+
+        with self.assertRaises(exceptions.Error) as cm:
+            list_command.list_revisions(None, self.args)
+
+        self.assertIn("User not found: nonexistent", str(cm.exception))
+
 
 class TestListRevisionsJSON(unittest.TestCase):
     """Test JSON output format."""
@@ -347,6 +392,7 @@ class TestListRevisionsJSON(unittest.TestCase):
             status=None,
             verbose=False,
             format="json",
+            user=None,
         )
         self.mock_revisions = [
             {
@@ -532,11 +578,26 @@ class TestListParser(unittest.TestCase):
         args = parent_parser.parse_args(["list", "--format", "json"])
         self.assertEqual(args.format, "json")
 
+        # Test with --user flag
+        args = parent_parser.parse_args(["list", "--user", "testuser"])
+        self.assertEqual(args.user, "testuser")
+
         # Test combined flags
         args = parent_parser.parse_args(
-            ["list", "--all", "--verbose", "--format", "json", "--status", "accepted"]
+            [
+                "list",
+                "--all",
+                "--verbose",
+                "--format",
+                "json",
+                "--status",
+                "accepted",
+                "--user",
+                "otheruser",
+            ]
         )
         self.assertTrue(args.all)
         self.assertTrue(args.verbose)
         self.assertEqual(args.format, "json")
         self.assertEqual(args.status, ["accepted"])
+        self.assertEqual(args.user, "otheruser")

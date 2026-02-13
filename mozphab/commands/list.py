@@ -32,12 +32,20 @@ def list_revisions(repo, args: argparse.Namespace):
         if not conduit.check():
             raise Error("Failed to use Conduit API")
 
-    # Get current user's PHID
+    # Get user PHID (either specified user or current user)
     with wait_message("Fetching user information..."):
-        whoami = conduit.whoami()
-        user_phid = whoami.get("phid")
-        if not user_phid:
-            raise Error("Unable to determine current user")
+        if args.user:
+            # Look up specified user
+            users = conduit.get_users([args.user])
+            if not users:
+                raise Error(f"User not found: {args.user}")
+            user_phid = users[0]["phid"]
+        else:
+            # Use current user
+            whoami = conduit.whoami()
+            user_phid = whoami.get("phid")
+            if not user_phid:
+                raise Error("Unable to determine current user")
 
     # Build status filter based on flags
     if args.status:
@@ -176,6 +184,10 @@ def add_parser(parser):
             "published",
         ],
         help="Filter by specific status(es).",
+    )
+    list_parser.add_argument(
+        "--user",
+        help="List revisions for specified user (default: current user).",
     )
     list_parser.add_argument(
         "--verbose",
